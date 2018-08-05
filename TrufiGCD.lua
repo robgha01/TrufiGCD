@@ -998,7 +998,14 @@ end
 function TrGCDEventHandler(self, event, ...)
 	local arg1, arg5 = ...; -- arg1 - who,  arg5 - spellID
 	local spellicon = select(3, GetSpellInfo(arg5))
-	local casttime = select(7, GetSpellInfo(arg5))/1000
+	local casttime = select(7, GetSpellInfo(arg5))
+	
+	if select(7, GetSpellInfo(arg5)) then
+		casttime = select(7, GetSpellInfo(arg5))/1000
+	else
+		casttime = 0
+	end
+
 	local spellname = GetSpellInfo(arg5)
 	local i,t = TrGCDPlayerDetect(arg1) -- i - ����� ������������, t = true - ���� ��� �� �� ���� ��� �� �����
 	if (TrGCDEnable and t and TrGCDQueueOpt[i].enable) then

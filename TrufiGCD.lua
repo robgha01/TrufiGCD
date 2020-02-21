@@ -529,7 +529,7 @@ function TrufiGCDAddonLoaded(self, event, ...)
 					TrGCDIcon[i][k]:SetScript("OnEnter", function (self)
 						if (TrufiGCDChSave["TooltipEnable"] == true) then
 							GameTooltip_SetDefaultAnchor(GameTooltip, self)
-							--GameTooltip:SetSpellByID(self.spellID, false, false, true) -- How to do this for 3.3.5 ?
+							GameTooltip:SetSpellByID(self.spellID, false, false, true)
 							GameTooltip:Show()
 							if (TrufiGCDChSave["TooltipStopMove"] == true) then
 								TrGCDIconOnEnter[i] = false

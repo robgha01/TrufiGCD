@@ -1,53 +1,53 @@
--- TrufiGCD stevemyz@gmail.com
+﻿-- TrufiGCD stevemyz@gmail.com
 
 --sizeicon = 30 
---speed = sizeicon /1.6 --�������� ���������
+--speed = sizeicon /1.6 --скорость перемотка
 local TimeGcd = 1.6
---width = sizeicon * 3 -- ����� �������
-local SpMod = 3 -- ����������� ���������� ���������
+--width = sizeicon * 3 -- длина очереди
+local SpMod = 3 -- модификатор ускоренной перемотки
 
-TrGCDBufferIcon = {} --������� ���������� ����� ��������
-local TimeDelay = 0.03 -- �������� ����� OnUpdate
-local TimeReset = GetTime() -- ����� ���������� OnUpdate
-local DurTimeImprove = 0.0 --����������������� ���������� ���������
-TrGCDCastSp = {} -- 0 - ���� ����, 1 - ���� ������ � �� ����
-TrGCDCastSpBanTime = {} --����� ��������� �����
-TrGCDBL = {} -- ������ ������ �������
-local BLSpSel = nil --���������� ����� � ���������
-local InnerBL = { --�������� ������ ������, �� ID
-	61391, -- ������ x2
-	5374, -- �������� �3
-	27576, -- �������� (����� ����) �3
-	88263, -- ����� ���������� �3
-	98057, -- ������� ���� �����
-	32175, -- ���� ����
-	32176, -- ���� ���� (����� ����)
-	96103, -- �������� �����
-	85384, -- �������� ����� (����� ����)
-	57794, -- ����������� ������
-	52174, -- ����������� ������
-	135299, -- ������� �������
-	121473, -- ������� ������
-	121474, -- ������ ������� ������
-	114093, -- �������� ����� (����� ����)
-	114089, -- �������� �����
-	115357, -- ���������� ����
-	115360, -- ���������� ���� (����� ����)
-	127797, -- ����� ������
-	102794, -- ����� ������
-	50622, -- ����� �������
-	122128, -- ������������ ������ (��)
-	110745, -- ������������ ������ (�� ��)
-	120696, -- ������ (��)
-	120692, -- ������ (�� ��)
-	115464, -- ����������� �����
-	126526, -- ����������� �����
-	132951, -- ������������� ������
-	107270, -- ��������� �������
-	137584, -- ������ ��������
-	137585, -- ������ �������� ����� �����
-	117993, -- ��-����� (�����)
-	124040, -- ��-����� (���)
+TrGCDBufferIcon = {} --счетчик расстояния между иконками
+local TimeDelay = 0.03 -- задержка между OnUpdate
+local TimeReset = GetTime() -- время последнего OnUpdate
+local DurTimeImprove = 0.0 --продолжительность ускоренной перемотки
+TrGCDCastSp = {} -- 0 - каст идет, 1 - каст прошел и не идет
+TrGCDCastSpBanTime = {} --время остановки каста
+TrGCDBL = {} -- черный список спеллов
+local BLSpSel = nil --выделенный спелл в блэклисте
+local InnerBL = { --закрытый черный список, по ID
+	61391, -- Тайфун x2
+	5374, -- Расправа х3
+	27576, -- Расправа (левая рука) х3
+	88263, -- Молот Праведника х3
+	98057, -- Великий воин Света
+	32175, -- Удар бури
+	32176, -- Удар бури (левая рука)
+	96103, -- Яростный выпад
+	85384, -- Яростный выпад (левая рука)
+	57794, -- Героический прыжок
+	52174, -- Героический прыжок
+	135299, -- Ледяная ловушка
+	121473, -- Теневой клинок
+	121474, -- Второй теневой клинок
+	114093, -- Хлещущий ветер (левая рука)
+	114089, -- Хлещущий ветер
+	115357, -- Свирепость бури
+	115360, -- Свирепость бури (левая рука)
+	127797, -- Вихрь урсола
+	102794, -- Вихрь урсола
+	50622, -- Вихрь клинков
+	122128, -- Божественная звезда (шп)
+	110745, -- Божественная звезда (не шп)
+	120696, -- Сияние (шп)
+	120692, -- Сияние (не шп)
+	115464, -- Целительная сфера
+	126526, -- Целительная сфера
+	132951, -- Осветительная ракета
+	107270, -- Танцующий журавль
+	137584, -- Бросок сюрикена
+	137585, -- Бросок сюрикена левой рукой
+	117993, -- Ци-полет (дамаг)
+	124040, -- Ци-полет (хил)
 	
 }
 local cross = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_7"
@@ -56,17 +56,17 @@ local trinket = "Interface\\Icons\\inv_jewelry_trinketpvp_01"
 TrGCDInsSp = {}
 TrGCDInsSp["spell"] = {}
 TrGCDInsSp["time"] = {}
-TrGCDSpStop = {} -- ����� ������ � ������� ��������� ���� ������
-TrGCDSpStopTime = {} -- ����� ������ � ������� ��������� ���� ������
+TrGCDSpStop = {} -- номер иконки у которой стопнулся каст спелла
+TrGCDSpStopTime = {} -- номер иконки у которой стопнулся каст спелла
 TrGCDSpStopName = {}
 local TrGCDEnable = true
-local PlayerDislocation = 0 -- ������������ ������: 1 - ���, 2 - ���, 3 - �����, 4 - ��.
-TrGCDIconOnEnter = {} -- false - ������ �� ������
-TrGCDTimeuseSpamSpell = {} -- ����� ����� ������������� �������� � ������� ����� N -> SpellID -> Time
+local PlayerDislocation = 0 -- Расположение игрока: 1 - Мир, 2 - ПвЕ, 3 - Арена, 4 - Бг.
+TrGCDIconOnEnter = {} -- false - курсор на иконке
+TrGCDTimeuseSpamSpell = {} -- время когда использовался спамящий в очередь спелл N -> SpellID -> Time
 
---��� �������� ������
-local ModTimeVanish = 2; -- �����, �� ������� ������ ����� ��������
-local ModTimeIndent = 3; -- �����, ����� ������� ������ ����� ��������
+--мод движения иконок
+local ModTimeVanish = 2; -- время, за которое иконки будут исчезать
+local ModTimeIndent = 3; -- время, через которое иконки будут исчезать
 
 --Masque
 local Masque = LibStub("Masque", true)
@@ -74,11 +74,11 @@ if Masque then
 	TrGCDMasqueIcons = Masque:Group("TrufiGCD", "All Icons")
 end
 
-SLASH_TRUFI1, SLASH_TRUFI2 = '/tgcd', '/trufigcd' --�����������
-function SlashCmdList.TRUFI(msg, editbox) --������� ���� �������
+SLASH_TRUFI1, SLASH_TRUFI2 = '/tgcd', '/trufigcd' --слэшкоманды
+function SlashCmdList.TRUFI(msg, editbox) --Функция слэш команды
 	InterfaceOptionsFrame_OpenToCategory(TrGCDGUI)
 end
-local function AddButton(parent,position,x,y,height,width,text,font,texttop,template) --������ ������
+local function AddButton(parent,position,x,y,height,width,text,font,texttop,template) --шаблон кнопки
 	local temp = nil
 	if (template == nil) then temp = "UIPanelButtonTemplate" end
 	local button = CreateFrame ("Button", nil, parent, temp)
@@ -94,7 +94,7 @@ local function AddButton(parent,position,x,y,height,width,text,font,texttop,temp
 	end
 	return button
 end
-local function AddCheckButton (parent, position,x,y,text,name,fromenable) --������ �������
+local function AddCheckButton (parent, position,x,y,text,name,fromenable) --шаблон галочки
 	local button = CreateFrame("CheckButton", name, parent, "ChatConfigCheckButtonTemplate")
 	button:SetPoint(position, parent, position,x,y)
 	button:SetChecked(fromenable)
@@ -112,7 +112,7 @@ local function AddCheckButton (parent, position,x,y,text,name,fromenable) --��
 	button:SetScript("OnLeave", function(self) GameTooltip:Hide() end)
 	return button
 end
-local function ValueReverse(value) -- ������� ����� ������� CheckButton, ������ ����������� �������� � ����������, false->true, true->false
+local function ValueReverse(value) -- функция после нажатия CheckButton, меняет сохраненное значение в параметрах, false->true, true->false
 	local t = value
 	if (t) then t = false else t = true end
 	return t
@@ -125,7 +125,7 @@ function TrufiGCDAddonLoaded(self, event, ...)
 	if (arg1 == "TrufiGCD" and event == "ADDON_LOADED") then 
 		--Load options
 		TrGCDQueueOpt = {}
-		local TrGCDNullOptions = false -- ��������� ������?
+		local TrGCDNullOptions = false -- настройки пустые?
 		if (TrufiGCDChSave == nil) then
 			TrGCDNullOptions = true
 		else
@@ -165,11 +165,11 @@ function TrufiGCDAddonLoaded(self, event, ...)
 				TrGCDQueueOpt[i].speed = TrufiGCDChSave["TrGCDQueueFr"][i]["speed"]
 			end				
 		end
-		--�������� �� ������ ������ ������
+		--Проверка на пустой Черный Список
 		if (TrufiGCDChSave["TrGCDBL"] == nil) then TrGCDBLDefaultSetting()
 		else TrGCDBL = TrufiGCDChSave["TrGCDBL"]
 		end
-		-- �������� �� ������ EnableIn
+		-- Проверка на пустые EnableIn
 		-- NEW MODE, TrufiGCDChSave["EnableIn"] - ["PvE"], ["Arena"], ["Bg"], ["World"] = true or false
 		TrGCDNullOptions = false
 		if (TrufiGCDChSave["EnableIn"] == nil) then
@@ -190,9 +190,9 @@ function TrufiGCDAddonLoaded(self, event, ...)
 			TrufiGCDChSave["EnableIn"]["World"] = true
 			TrufiGCDChSave["EnableIn"]["Enable"] = true
 		end
-		-- �������� �� ������ ModScroll VERSION 1.5
+		-- проверка на пустой ModScroll VERSION 1.5
 		if (TrufiGCDChSave["ModScroll"] == nil) then TrufiGCDChSave["ModScroll"] = true end
-		-- �������� �� ������ EnableIn - Raid VERSION 1.6
+		-- проверка на пустой EnableIn - Raid VERSION 1.6
 		if (TrufiGCDChSave["EnableIn"]["Raid"] == nil) then TrufiGCDChSave["EnableIn"]["Raid"] = true end
 		if (TrufiGCDChSave["TooltipStopMove"] == nil) then TrufiGCDChSave["TooltipStopMove"] = true end
 		if (TrufiGCDChSave["TooltipSpellID"] == nil) then TrufiGCDChSave["TooltipSpellID"] = false end
@@ -202,86 +202,86 @@ function TrufiGCDAddonLoaded(self, event, ...)
 		TrGCDGUI = CreateFrame ("Frame", nil, UIParent, "OptionsBoxTemplate")
 		TrGCDGUI:Hide()
 		TrGCDGUI.name = "TrufiGCD"
-		--������ show/hide
-		TrGCDGUI.buttonfix = AddButton(TrGCDGUI,"TOPLEFT",10,-30,22,100,"Show",10,"Show/Hide anchors")
+		--кнопка show/hide
+		TrGCDGUI.buttonfix = AddButton(TrGCDGUI,"TOPLEFT",10,-5,20,50,"Show",10,"")
 		TrGCDGUI.buttonfix:SetScript("OnClick", TrGCDGUIButtonFixClick)
-		--������ �������� �������� ����������� � ����
-		TrGCDGUI.ButtonLoad = AddButton(TrGCDGUI,"TOPRIGHT",-145,-30,22,100,"Load",10,"Load saving settings")
+		--кнопка загрузки настроек сохраненных в кэше
+		TrGCDGUI.ButtonLoad = AddButton(TrGCDGUI,"TOPRIGHT",-145,-5,22,50,"Load",10,"")
 		TrGCDGUI.ButtonLoad:SetScript("OnClick", TrGCDLoadSettings) 
-		--������ ���������� �������� � ���
-		TrGCDGUI.ButtonSave = AddButton(TrGCDGUI,"TOPRIGHT",-260,-30,22,100,"Save",10,"Save settings to cache")
+		--кнопки сохранения настроек в кэш
+		TrGCDGUI.ButtonSave = AddButton(TrGCDGUI,"TOPRIGHT",-260,-5,22,50,"Save",10,"")
 		TrGCDGUI.ButtonSave:SetScript("OnClick", TrGCDSaveSettings) 
-		--������ �������������� ����������� ��������
-		TrGCDGUI.ButtonRes = AddButton(TrGCDGUI,"TOPRIGHT",-30,-30,22,100,"Default",10,"Restore default settings")
+		--кнопка восстановления стандартных настроек
+		TrGCDGUI.ButtonRes = AddButton(TrGCDGUI,"TOPRIGHT",-30,-5,22,50,"Default",10,"")
 		TrGCDGUI.ButtonRes:SetScript("OnClick", function () TrGCDRestoreDefaultSettings() TrGCDUploadViewSetting() end) 
-		--��� �� ������
+		--чек на Тултип
 		TrGCDGUI.CheckTooltipText = TrGCDGUI:CreateFontString(nil, "BACKGROUND")
 		TrGCDGUI.CheckTooltipText:SetFont("Fonts\\FRIZQT__.TTF", 12)
 		TrGCDGUI.CheckTooltipText:SetText("Tooltip:")
-		TrGCDGUI.CheckTooltipText:SetPoint("TOPRIGHT", TrGCDGUI, "TOPRIGHT",-70, -360)
-		TrGCDGUI.CheckTooltip = AddCheckButton(TrGCDGUI,"TOPRIGHT",-90,-380,"Enable","TrGCDCheckTooltip",TrufiGCDChSave["TooltipEnable"])
+		TrGCDGUI.CheckTooltipText:SetPoint("BOTTOMLEFT", TrGCDGUI, "BOTTOMLEFT",12, 105)
+		TrGCDGUI.CheckTooltip = AddCheckButton(TrGCDGUI,"BOTTOMLEFT", 10, 80,"Enable","TrGCDCheckTooltip",TrufiGCDChSave["TooltipEnable"])
 		TrGCDGUI.CheckTooltip:SetScript("OnClick", function () TrufiGCDChSave["TooltipEnable"] = ValueReverse(TrufiGCDChSave["TooltipEnable"]) end)
 		TrGCDGUI.CheckTooltip.tooltipText = ('Show tooltips when hovering the icon')
-		TrGCDGUI.CheckTooltipMove = AddCheckButton(TrGCDGUI,"TOPRIGHT",-90,-410,"Stop icons","TrGCDCheckTooltipMove",TrufiGCDChSave["TooltipStopMove"])
+		TrGCDGUI.CheckTooltipMove = AddCheckButton(TrGCDGUI,"BOTTOMLEFT",10,60,"Stop icons","TrGCDCheckTooltipMove",TrufiGCDChSave["TooltipStopMove"])
 		TrGCDGUI.CheckTooltipMove:SetScript("OnClick", function () TrufiGCDChSave["TooltipStopMove"] = ValueReverse(TrufiGCDChSave["TooltipStopMove"]) end)
 		TrGCDGUI.CheckTooltipMove.tooltipText = ('Stop moving icons when hovering the icon')
-		TrGCDGUI.CheckTooltipID = AddCheckButton(TrGCDGUI,"TOPRIGHT",-90,-440,"Spell ID","TrGCDCheckTooltipSpellID",TrufiGCDChSave["TooltipSpellID"])
+		TrGCDGUI.CheckTooltipID = AddCheckButton(TrGCDGUI,"BOTTOMLEFT",10, 40,"Spell ID","TrGCDCheckTooltipSpellID",TrufiGCDChSave["TooltipSpellID"])
 		TrGCDGUI.CheckTooltipID:SetScript("OnClick", function () TrufiGCDChSave["TooltipSpellID"] = ValueReverse(TrufiGCDChSave["TooltipSpellID"]) end)
 		TrGCDGUI.CheckTooltipID.tooltipText = ('Write spell ID to the chat when hovering the icon')
-		-- ��� �� ������ ������
-		TrGCDGUI.CheckModScroll = AddCheckButton(TrGCDGUI,"TOPRIGHT",-90,-80,"Scrolling icons","TrGCDCheckModScroll",TrufiGCDChSave["ModScroll"])
+		-- чек на скролл иконок
+		TrGCDGUI.CheckModScroll = AddCheckButton(TrGCDGUI,"BOTTOMLEFT", 10, 20,"Scrolling icons","TrGCDCheckModScroll",TrufiGCDChSave["ModScroll"])
 		TrGCDGUI.CheckModScroll:SetScript("OnClick", function () TrufiGCDChSave["ModScroll"] = ValueReverse(TrufiGCDChSave["ModScroll"]) end)
 		TrGCDGUI.CheckModScroll.tooltipText = ('Icon will just disappear')
-		-- ������� EnableIn: Enable, World, PvE, Arena, Bg
+		-- Галочки EnableIn: Enable, World, PvE, Arena, Bg
 		TrGCDGUI.CheckEnableIn = {}
 		TrGCDGUI.CheckEnableIn.Text = TrGCDGUI:CreateFontString(nil, "BACKGROUND")
 		TrGCDGUI.CheckEnableIn.Text:SetFont("Fonts\\FRIZQT__.TTF", 12)
 		TrGCDGUI.CheckEnableIn.Text:SetText("Enable in:")
-		TrGCDGUI.CheckEnableIn.Text:SetPoint("TOPRIGHT", TrGCDGUI, "TOPRIGHT",-53, -175)
-		TrGCDGUI.CheckEnableIn[0] = AddCheckButton(TrGCDGUI, "TOPRIGHT",-90,-140,"Enable addon","trgcdcheckenablein0",TrufiGCDChSave["EnableIn"]["Enable"])
+		TrGCDGUI.CheckEnableIn.Text:SetPoint("BOTTOMLEFT", TrGCDGUI, "BOTTOMLEFT",202, 105)
+		TrGCDGUI.CheckEnableIn[0] = AddCheckButton(TrGCDGUI, "BOTTOMLEFT",290,100,"Enable addon","trgcdcheckenablein0",TrufiGCDChSave["EnableIn"]["Enable"])
 		TrGCDGUI.CheckEnableIn[0]:SetScript("OnClick", function ()
 			TrufiGCDChSave["EnableIn"]["Enable"] = ValueReverse(TrufiGCDChSave["EnableIn"]["Enable"])
 			TrGCDCheckToEnableAddon(0)
 		end)
-		TrGCDGUI.CheckEnableIn[1] = AddCheckButton(TrGCDGUI, "TOPRIGHT",-90,-200,"World","trgcdcheckenablein1",TrufiGCDChSave["EnableIn"]["World"])
+		TrGCDGUI.CheckEnableIn[1] = AddCheckButton(TrGCDGUI, "BOTTOMLEFT",200, 80,"World","trgcdcheckenablein1",TrufiGCDChSave["EnableIn"]["World"])
 		TrGCDGUI.CheckEnableIn[1]:SetScript("OnClick", function ()
 			TrufiGCDChSave["EnableIn"]["World"] = ValueReverse(TrufiGCDChSave["EnableIn"]["World"])
 			TrGCDCheckToEnableAddon(1)
 		end)
-		TrGCDGUI.CheckEnableIn[2] = AddCheckButton(TrGCDGUI, "TOPRIGHT",-90,-230,"Party","trgcdcheckenablein2",TrufiGCDChSave["EnableIn"]["PvE"])
+		TrGCDGUI.CheckEnableIn[2] = AddCheckButton(TrGCDGUI, "BOTTOMLEFT",200, 60,"Party","trgcdcheckenablein2",TrufiGCDChSave["EnableIn"]["PvE"])
 		TrGCDGUI.CheckEnableIn[2]:SetScript("OnClick", function ()
 			TrufiGCDChSave["EnableIn"]["PvE"] = ValueReverse(TrufiGCDChSave["EnableIn"]["PvE"])
 			TrGCDCheckToEnableAddon(2)
 		end)		
-		TrGCDGUI.CheckEnableIn[5] = AddCheckButton(TrGCDGUI, "TOPRIGHT",-90,-260,"Raid","trgcdcheckenablein5",TrufiGCDChSave["EnableIn"]["Raid"])
+		TrGCDGUI.CheckEnableIn[5] = AddCheckButton(TrGCDGUI, "BOTTOMLEFT",200, 40,"Raid","trgcdcheckenablein5",TrufiGCDChSave["EnableIn"]["Raid"])
 		TrGCDGUI.CheckEnableIn[5]:SetScript("OnClick", function ()
 			TrufiGCDChSave["EnableIn"]["Raid"] = ValueReverse(TrufiGCDChSave["EnableIn"]["Raid"])
 			TrGCDCheckToEnableAddon(5)
 		end)
-		TrGCDGUI.CheckEnableIn[3] = AddCheckButton(TrGCDGUI, "TOPRIGHT",-90,-290,"Arena","trgcdcheckenablein3",TrufiGCDChSave["EnableIn"]["Arena"])
+		TrGCDGUI.CheckEnableIn[3] = AddCheckButton(TrGCDGUI, "BOTTOMLEFT",200, 20,"Arena","trgcdcheckenablein3",TrufiGCDChSave["EnableIn"]["Arena"])
 		TrGCDGUI.CheckEnableIn[3]:SetScript("OnClick", function ()
 			TrufiGCDChSave["EnableIn"]["Arena"] = ValueReverse(TrufiGCDChSave["EnableIn"]["Arena"])
 			TrGCDCheckToEnableAddon(3)
 		end)	
-		TrGCDGUI.CheckEnableIn[4] = AddCheckButton(TrGCDGUI, "TOPRIGHT",-90,-320,"Battleground","trgcdcheckenablein4",TrufiGCDChSave["EnableIn"]["Bg"])
+		TrGCDGUI.CheckEnableIn[4] = AddCheckButton(TrGCDGUI, "BOTTOMLEFT",200, 0,"Battleground","trgcdcheckenablein4",TrufiGCDChSave["EnableIn"]["Bg"])
 		TrGCDGUI.CheckEnableIn[4]:SetScript("OnClick", function ()
 			TrufiGCDChSave["EnableIn"]["Bg"] = ValueReverse(TrufiGCDChSave["EnableIn"]["Bg"])
 			TrGCDCheckToEnableAddon(4)
 		end)
-		--������� � ��������, ��������� � ����
+		--подписи к галочкам, слайдерам и меню
 		for i=1,4 do
 			_G["TrGCDGUI.Text" .. i] = TrGCDGUI:CreateFontString(nil, "BACKGROUND")
 			_G["TrGCDGUI.Text" .. i]:SetFont("Fonts\\FRIZQT__.TTF", 12)
 		end
 		_G["TrGCDGUI.Text1"]:SetText("Enable")
-		_G["TrGCDGUI.Text1"]:SetPoint("TOPLEFT", TrGCDGUI, "TOPLEFT",20, -65)		
+		_G["TrGCDGUI.Text1"]:SetPoint("TOPLEFT", TrGCDGUI, "TOPLEFT",20, -30)		
 		_G["TrGCDGUI.Text2"]:SetText("Fade")
-		_G["TrGCDGUI.Text2"]:SetPoint("TOPLEFT", TrGCDGUI, "TOPLEFT",105, -65)	
+		_G["TrGCDGUI.Text2"]:SetPoint("TOPLEFT", TrGCDGUI, "TOPLEFT",105, -30)	
 		_G["TrGCDGUI.Text3"]:SetText("Size icons")
-		_G["TrGCDGUI.Text3"]:SetPoint("TOPLEFT", TrGCDGUI, "TOPLEFT",245, -65)	
+		_G["TrGCDGUI.Text3"]:SetPoint("TOPLEFT", TrGCDGUI, "TOPLEFT",195, -30)	
 		_G["TrGCDGUI.Text4"]:SetText("Number of icons")
-		_G["TrGCDGUI.Text4"]:SetPoint("TOPLEFT", TrGCDGUI, "TOPLEFT",390, -65)	
-		-- ����� ����� ������� ������ show/hide
+		_G["TrGCDGUI.Text4"]:SetPoint("TOPLEFT", TrGCDGUI, "TOPLEFT",300, -30)	
+		-- фрейм после нажатия кнопки show/hide
 		TrGCDFixEnable = CreateFrame ("Frame", nil, UIParent)
 		TrGCDFixEnable:SetHeight(50)
 		TrGCDFixEnable:SetWidth(160)
@@ -306,11 +306,11 @@ function TrufiGCDAddonLoaded(self, event, ...)
 		TrGCDGUI.sizeslider = {}
 		TrGCDGUI.widthslider = {}
 		for i=1,12 do
-			TrGCDGUI.checkenable[i] = AddCheckButton(TrGCDGUI, "TOPLEFT",10,-50-i*40,TrGCDQueueOpt[i].text,("checkenable"..i),TrGCDQueueOpt[i].enable)
+			TrGCDGUI.checkenable[i] = AddCheckButton(TrGCDGUI, "TOPLEFT",10,-30-i*20,TrGCDQueueOpt[i].text,("checkenable"..i),TrGCDQueueOpt[i].enable)
 			TrGCDGUI.checkenable[i]:SetScript("OnClick", function () TrGCDCheckEnableClick(i) end)
 			--dropdown menues
 			TrGCDGUI.menu[i] = CreateFrame("FRAME", ("TrGCDGUImenu"..i), TrGCDGUI, "UIDropDownMenuTemplate")
-			TrGCDGUI.menu[i]:SetPoint("TOPLEFT", TrGCDGUI, "TOPLEFT",70, -50-i*40)
+			TrGCDGUI.menu[i]:SetPoint("TOPLEFT", TrGCDGUI, "TOPLEFT",70, -30-i*20)
 			UIDropDownMenu_SetWidth(TrGCDGUI.menu[i], 55)
 			UIDropDownMenu_SetText(TrGCDGUI.menu[i], TrGCDQueueOpt[i].fade)
 			UIDropDownMenu_Initialize(TrGCDGUI.menu[i], function(self, level, menuList)
@@ -335,8 +335,8 @@ function TrufiGCDAddonLoaded(self, event, ...)
 			end)
 			--Size Slider
 			TrGCDGUI.sizeslider[i] = CreateFrame("Slider", ("TrGCDGUIsizeslider" .. i), TrGCDGUI, "OptionsSliderTemplate")
-			TrGCDGUI.sizeslider[i]:SetWidth(170)
-			TrGCDGUI.sizeslider[i]:SetPoint("TOPLEFT", TrGCDGUI, "TOPLEFT",190, -55-i*40)
+			TrGCDGUI.sizeslider[i]:SetWidth(80)
+			TrGCDGUI.sizeslider[i]:SetPoint("TOPLEFT", TrGCDGUI, "TOPLEFT",190, -35-i*20)
 			TrGCDGUI.sizeslider[i].tooltipText = ('Size icons ' .. TrGCDQueueOpt[i].text)
 			getglobal(TrGCDGUI.sizeslider[i]:GetName() .. 'Low'):SetText('10')
 			getglobal(TrGCDGUI.sizeslider[i]:GetName() .. 'High'):SetText('100')
@@ -349,7 +349,7 @@ function TrufiGCDAddonLoaded(self, event, ...)
 			--Width Slider
 			TrGCDGUI.widthslider[i] = CreateFrame("Slider", ("TrGCDGUIwidthslider" .. i), TrGCDGUI, "OptionsSliderTemplate")
 			TrGCDGUI.widthslider[i]:SetWidth(100)
-			TrGCDGUI.widthslider[i]:SetPoint("TOPLEFT", TrGCDGUI, "TOPLEFT",390, -55-i*40)
+			TrGCDGUI.widthslider[i]:SetPoint("TOPLEFT", TrGCDGUI, "TOPLEFT",300, -35-i*20)
 			TrGCDGUI.widthslider[i].tooltipText = ('Spell icons in queue ' .. TrGCDQueueOpt[i].text)
 			getglobal(TrGCDGUI.widthslider[i]:GetName() .. 'Low'):SetText('1')
 			getglobal(TrGCDGUI.widthslider[i]:GetName() .. 'High'):SetText('8')
@@ -361,23 +361,23 @@ function TrufiGCDAddonLoaded(self, event, ...)
 			TrGCDGUI.widthslider[i]:Show()
 		end
 		InterfaceOptions_AddCategory(TrGCDGUI)
-		--���������� ������� Spell Black List
+		--добавления вкладки Spell Black List
 		TrGCDGUI.BL = CreateFrame ("Frame", nil, UIParent, "OptionsBoxTemplate")
 		TrGCDGUI.BL:Hide()
 		TrGCDGUI.BL.name = "Blacklist"
 		TrGCDGUI.BL.parent = "TrufiGCD"
 		TrGCDGUI.BL.ScrollBD = CreateFrame ("Frame", nil, TrGCDGUI.BL)
-		TrGCDGUI.BL.ScrollBD:SetPoint("TOPLEFT", TrGCDGUI.BL, "TOPLEFT",10, -25)
+		TrGCDGUI.BL.ScrollBD:SetPoint("TOPLEFT", TrGCDGUI.BL, "TOPLEFT",10, -70)
 		TrGCDGUI.BL.ScrollBD:SetWidth(200)
-		TrGCDGUI.BL.ScrollBD:SetHeight(501)		
+		TrGCDGUI.BL.ScrollBD:SetHeight(200)		
 		TrGCDGUI.BL.ScrollBD:SetBackdrop({bgFile = nil,
 			edgeFile = "Interface/Tooltips/UI-Tooltip-Border", 
 			tile = true, tileSize = 16, edgeSize = 16, 
 			insets = {left = 0, right = 0, top = 0, bottom = 0}})		
 		TrGCDGUI.BL.Scroll = CreateFrame ("ScrollFrame", nil, TrGCDGUI.BL)
-		TrGCDGUI.BL.Scroll:SetPoint("TOPLEFT", TrGCDGUI.BL, "TOPLEFT",10, -30)
+		TrGCDGUI.BL.Scroll:SetPoint("TOPLEFT", TrGCDGUI.BL, "TOPLEFT",10, -70)
 		TrGCDGUI.BL.Scroll:SetWidth(200)
-		TrGCDGUI.BL.Scroll:SetHeight(488)
+		TrGCDGUI.BL.Scroll:SetHeight(200)
 		TrGCDGUI.BL.Scroll.ScrollBar = CreateFrame("Slider", "TrGCDBLScroll", TrGCDGUI.BL.Scroll, "UIPanelScrollBarTemplate") 
 		TrGCDGUI.BL.Scroll.ScrollBar:SetPoint("TOPLEFT", TrGCDGUI.BL.Scroll, "TOPRIGHT", 1, -16) 
 		TrGCDGUI.BL.Scroll.ScrollBar:SetPoint("BOTTOMLEFT", TrGCDGUI.BL.Scroll, "BOTTOMRIGHT", 1, 16) 
@@ -432,7 +432,7 @@ function TrufiGCDAddonLoaded(self, event, ...)
 		end) 
 		TrGCDGUI.BL.Scroll:SetScrollChild(TrGCDGUI.BL.List)
 		TrGCDGUI.BL.AddEdit = CreateFrame("EditBox", nil, TrGCDGUI.BL, "InputBoxTemplate")
-		TrGCDGUI.BL.AddEdit:SetWidth(200)
+		TrGCDGUI.BL.AddEdit:SetWidth(130)
 		TrGCDGUI.BL.AddEdit:SetHeight(20)
 		TrGCDGUI.BL.AddEdit:SetPoint("TOPLEFT", TrGCDGUI.BL, "TOPLEFT", 265, -200)
 		TrGCDGUI.BL.AddEdit:SetAutoFocus(false)
@@ -445,13 +445,13 @@ function TrufiGCDAddonLoaded(self, event, ...)
 		TrGCDGUI.BL.AddButt.Text2:SetFont("Fonts\\FRIZQT__.TTF", 11)
 		--TrGCDGUI.BL.AddButt.Text2:SetText("Blacklist can be loaded from the saved settings,\nbut does not restore the default.")
 		TrGCDGUI.BL.AddButt.Text2:SetPoint("BOTTOMLEFT", TrGCDGUI.BL.AddButt, "BOTTOMLEFT", 0, -35)
-		--������ �������� �������� ����������� � ����
+		--кнопка загрузки настроек сохраненных в кэше
 		TrGCDGUI.BL.ButtonLoad = AddButton(TrGCDGUI.BL,"TOPRIGHT",-145,-30,22,100,"Load",10,"Load saving blacklist")
 		TrGCDGUI.BL.ButtonLoad:SetScript("OnClick", TrGCDBLLoadSetting) 
-		--������ ���������� �������� � ���
+		--кнопки сохранения настроек в кэш
 		TrGCDGUI.BL.ButtonSave = AddButton(TrGCDGUI.BL,"TOPRIGHT",-260,-30,22,100,"Save",10,"Save blacklist to cache")
 		TrGCDGUI.BL.ButtonSave:SetScript("OnClick", TrGCDBLSaveSetting) 
-		--������ �������������� ����������� ��������
+		--кнопка восстановления стандартных настроек
 		TrGCDGUI.BL.ButtonRes = AddButton(TrGCDGUI.BL,"TOPRIGHT",-30,-30,22,100,"Default",10,"Restore default blacklist")
 		TrGCDGUI.BL.ButtonRes:SetScript("OnClick", function () TrGCDBLDefaultSetting() TrGCDLoadBlackList() end) 		
 		InterfaceOptions_AddCategory(TrGCDGUI.BL)
@@ -462,11 +462,14 @@ function TrufiGCDAddonLoaded(self, event, ...)
 		TrGCDEnterEventFrame:SetScript("OnEvent", TrGCDEnterEventHandler)
 		-- Creating event spell frame
 		TrGCDEventFrame = CreateFrame("Frame", nil, UIParent)
-		TrGCDEventFrame:RegisterEvent("UNIT_SPELLCAST_START")
+		
+		TrGCDEventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 		TrGCDEventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 		TrGCDEventFrame:RegisterEvent("UNIT_SPELLCAST_STOP")
+		TrGCDEventFrame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
 		TrGCDEventFrame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
-		TrGCDEventFrame:SetScript("OnEvent", TrGCDEventHandler)
+		
+		TrGCDEventFrame:SetScript("OnEvent", BackPortedUnitEventCaller)
 		TrGCDEventFrame:SetScript("OnUpdate", TrGCDUpdate)
 		TrGCDEventBuffFrame = CreateFrame("Frame", nil, UIParent)
 		TrGCDEventBuffFrame:RegisterEvent("UNIT_AURA")
@@ -477,9 +480,9 @@ function TrufiGCDAddonLoaded(self, event, ...)
 		--11 - target, 12 - focus
 		TrGCDQueueFr = {}
 		TrGCDIcon = {}
-		TrGCDi = {} --������� TrGCDIcons
-		TrGCDQueueFirst = {} -- ������� ������� �� ������ �����
-		TrGCDQueueFirstI = {} --������ �������, ����� ����������, ��� ����� �������� � TrGCDQueueFr
+		TrGCDi = {} --счетчик TrGCDIcons
+		TrGCDQueueFirst = {} -- очередь спеллов на первое место
+		TrGCDQueueFirstI = {} --начало очереди, потом сдвигается, как спелл проходит в TrGCDQueueFr
 		for i=1,12 do
 			--if (TrGCDQueueOpt[i].enable) then
 				TrGCDQueueFr[i] = CreateFrame("Frame", nil, UIParent)
@@ -526,7 +529,7 @@ function TrufiGCDAddonLoaded(self, event, ...)
 					TrGCDIcon[i][k]:SetScript("OnEnter", function (self)
 						if (TrufiGCDChSave["TooltipEnable"] == true) then
 							GameTooltip_SetDefaultAnchor(GameTooltip, self)
-							--GameTooltip:SetSpellByID(self.spellID, false, false, true) -- How to do this for 3.3.5 ?
+							GameTooltip:SetSpellByID(self.spellID, false, false, true)
 							GameTooltip:Show()
 							if (TrufiGCDChSave["TooltipStopMove"] == true) then
 								TrGCDIconOnEnter[i] = false
@@ -540,9 +543,9 @@ function TrufiGCDAddonLoaded(self, event, ...)
 					if Masque then TrGCDMasqueIcons:AddButton(TrGCDIcon[i][k], {Icon = TrGCDIcon[i][k].texture}) end
 				end
 				TrGCDQueueFirst[i] = {}
-				TrGCDQueueFirstI[i] = 1 --������ �������, ����� ����������, ��� ����� �������� � TrGCDQueueFr
+				TrGCDQueueFirstI[i] = 1 --начало очереди, потом сдвигается, как спелл проходит в TrGCDQueueFr
 				TrGCDBufferIcon[i] = 0.0
-				TrGCDCastSp[i] = 1 -- 0 - ���� ����, 1 - ���� ������ � �� ����
+				TrGCDCastSp[i] = 1 -- 0 - каст идет, 1 - каст прошел и не идет
 			--end
 		end
 		TrGCDQueueFr[11]:RegisterEvent("PLAYER_TARGET_CHANGED")
@@ -557,7 +560,45 @@ function TrufiGCDAddonLoaded(self, event, ...)
 		end)
 	end
 end
-function TrGCDCheckToEnableAddon(t) -- ��������� ����� EnableIn � �� ����� ��� ������� �� �����
+
+local possibleTargets = 
+{
+	"player", "target", "focus",
+	"party1", "party2", "party3", "party4", "party5",
+	"arena1", "arena2", "arena3","arena4","arena5"
+}
+
+function ResolveTargets(targetGUID)
+	local result = {}
+	for k,v in pairs(possibleTargets) do
+		if (UnitGUID(v) == targetGUID) then 
+			table.insert(result, v)
+		end
+	end
+	return result
+end
+
+function BackPortedUnitEventCaller(self, event, ...)
+	if (event == "COMBAT_LOG_EVENT_UNFILTERED") then
+		-- arg1      arg2        arg3        arg4         arg5       arg6       arg7     arg8      arg9
+		local timestamp, eventType, sourceGUID, sourceName, sourceFlags, destGUID, destName, destFlags, destId = ...
+		
+		local ev = nil
+		if (eventType == "SPELL_CAST_START") then ev = "UNIT_SPELLCAST_START" end
+		if (eventType == "SPELL_CAST_SUCCESS") then ev = "UNIT_SPELLCAST_SUCCEEDED" end
+		
+		if (ev ~= nil) then
+			for k,v in pairs(ResolveTargets(sourceGUID)) do
+				TrGCDEventHandler(self, ev, v, destId)
+			end
+		end
+	else
+		local target = ...
+		TrGCDEventHandler(self, event, target)
+	end
+end
+
+function TrGCDCheckToEnableAddon(t) -- проверяет галки EnableIn и от этого уже включен ли аддон
 	if (TrufiGCDChSave["EnableIn"]["Enable"] == false) then TrGCDEnable = false
 	elseif (PlayerDislocation == 1) then TrGCDEnable = TrufiGCDChSave["EnableIn"]["World"]
 	elseif (PlayerDislocation == 2) then TrGCDEnable = TrufiGCDChSave["EnableIn"]["PvE"]
@@ -571,7 +612,7 @@ function TrGCDCheckToEnableAddon(t) -- ��������� �����
 		end
 	end
 end
-function TrGCDEnterEventHandler(self, event, ...) -- �����, ����� ����� ������� �� ��, �����, ���, ��� �������� �������
+function TrGCDEnterEventHandler(self, event, ...) -- эвент, когда игрок заходит на бг, арену, пве, или наоборот выходит
 	local _, PlayerLocation = IsInInstance()
 	if (event == "PLAYER_ENTERING_BATTLEGROUND") then
 		if (PlayerLocation == "arena") then
@@ -599,7 +640,7 @@ function TrGCDEnterEventHandler(self, event, ...) -- �����, ����
 		end
 	end
 end
-function TrGCDLoadBlackList() -- �������� ������� ������
+function TrGCDLoadBlackList() -- загрузка черного списка
 	for i=1,60 do
 		if (TrGCDBL[i] ~= nil) then
 			local spellname = GetSpellInfo(TrGCDBL[i])
@@ -646,9 +687,9 @@ function TrGCDBLDefaultSetting()
 	if (TrufiGCDChSave == nil) then TrufiGCDChSave = {} end
 	TrufiGCDChSave["TrGCDBL"] = {}
 	TrGCDBL = TrufiGCDChSave["TrGCDBL"]
-	TrGCDBL[1] = 6603 --���������
-	TrGCDBL[2] = 75 --�����������
-	TrGCDBL[3] = 7384 --������������o
+	TrGCDBL[1] = 6603 --автоатака
+	TrGCDBL[2] = 75 --автовыстрел
+	TrGCDBL[3] = 7384 --превосходствo
 end
 function TrGCDSaveSettings()
 	if (TrufiGCDGlSave == nil) then TrufiGCDGlSave = {} end
@@ -711,7 +752,7 @@ function TrGCDLoadSettings()
 		TrGCDUploadViewSetting()
 	end
 end
-function TrGCDRestoreDefaultSettings() -- �������������� ����������� ��������
+function TrGCDRestoreDefaultSettings() -- восстановление стандартных настроек
 	if (TrufiGCDChSave == nil) then TrufiGCDChSave = {} end
 	TrufiGCDChSave["TrGCDQueueFr"] = {}
 	TrufiGCDChSave["TooltipEnable"] = true
@@ -778,7 +819,7 @@ function TrGCDUploadViewSetting()
 	TrGCDGUI.CheckEnableIn[5]:SetChecked(TrufiGCDChSave["EnableIn"]["Raid"])	
 	TrGCDGUI.CheckModScroll:SetChecked(TrufiGCDChSave["ModScroll"])
 end
-function TrGCDResizeQFr(i) -- ������ ����� ��������� ������� ������� TrGCDQueueFr
+function TrGCDResizeQFr(i) -- ресайз после изменения размера очереди TrGCDQueueFr
 	if ((TrGCDQueueOpt[i].fade == "Left") or (TrGCDQueueOpt[i].fade == "Right")) then
 		TrGCDQueueFr[i]:SetHeight(TrGCDQueueOpt[i].size)
 		TrGCDQueueFr[i]:SetWidth(TrGCDQueueOpt[i].width*TrGCDQueueOpt[i].size)
@@ -788,7 +829,7 @@ function TrGCDResizeQFr(i) -- ������ ����� �����
 	end
 	if Masque then TrGCDMasqueIcons:ReSkin() end
 end
-function TrGCDSpSizeChanged(i,value) --������� ������ ������ �������
+function TrGCDSpSizeChanged(i,value) --изменен размер иконок спеллов
 	value = math.ceil(value);
 	getglobal(TrGCDGUI.sizeslider[i]:GetName() .. 'Text'):SetText(value)
 	TrGCDQueueOpt[i].size = value
@@ -798,7 +839,7 @@ function TrGCDSpSizeChanged(i,value) --������� ������ 
 	TrGCDResizeQFr(i)
 	TrGCDClear(i)
 end
-function TrGCDSpWidthChanged(i,value) --�������� ����� ������� �������
+function TrGCDSpWidthChanged(i,value) --изменена длина очереди спеллов
 	value = math.ceil(value);
 	getglobal(TrGCDGUI.widthslider[i]:GetName() .. 'Text'):SetText(value)
 	TrGCDQueueOpt[i].width = value
@@ -806,14 +847,14 @@ function TrGCDSpWidthChanged(i,value) --�������� �����
 	TrGCDResizeQFr(i)	
 	TrGCDClear(i)
 end
-function TrGCDFadeMenuWasCheck(i, str) --������� ������� � ���� ����������� ����� ������
+function TrGCDFadeMenuWasCheck(i, str) --выбрана строчка в меню направления фейда абилок
 	TrGCDClear(i)
 	UIDropDownMenu_SetText(TrGCDGUI.menu[i], str)
 	TrGCDQueueOpt[i].fade = str
 	TrufiGCDChSave["TrGCDQueueFr"][i]["fade"] = str
 	TrGCDResizeQFr(i)
 end
-function TrGCDCheckEnableClick(i) --��������� ���� �� ������� ���/���� �������
+function TrGCDCheckEnableClick(i) --произошел клик по галочки вкл/выкл фреймов
 	if (TrGCDQueueOpt[i].enable) then
 		if (TrGCDGUI.buttonfix:GetText() == "Hide") then
 			TrGCDQueueFr[i]:SetMovable(false)
@@ -835,7 +876,7 @@ function TrGCDCheckEnableClick(i) --��������� ���� �
 	end
 	TrGCDClear(i)
 end
-function TrGCDGUIButtonFixClick() --������� ������ show/hide � ������
+function TrGCDGUIButtonFixClick() --функция кнопки show/hide в опциях
 	if 	(TrGCDGUI.buttonfix:GetText() == "Show") then
 		TrGCDGUI.buttonfix:SetText("Hide")
 		TrGCDFixEnable:Show()
@@ -883,14 +924,14 @@ function TrGCDClear(i)
 		--TrGCDIcon[i][k]:SetPoint("LEFT", TrGCDQueueFr[i], "LEFT",0,0)
 	end
 end
-local function TrGCDCheckForEual(a,b) -- �������� ��������������� ������ - ���, ��
+local function TrGCDCheckForEual(a,b) -- проверка эквивалентности юнитов - имя, хп
 	local t = false
 	if ((UnitName(a) == UnitName(b)) and (UnitName(a)~= nil) and (UnitName(b) ~= nil)) then
 		if (UnitHealth(a) == UnitHealth(b)) then t = true end
 	end
 	return t
 end
-function TrGCDPlayerTarFocDetect(k) -- ��� ���� �� ���� ��� ����� ��� �� ������� (���� ��� �����)
+function TrGCDPlayerTarFocDetect(k) -- чек есть ли цель или фокус уже во фреймах (пати или арена)
 	--k = 11 - target, 12 - focus
 	local t = "null"
 	local i = 0
@@ -901,7 +942,7 @@ function TrGCDPlayerTarFocDetect(k) -- ��� ���� �� ����
 	for j=6,10 do if (TrGCDCheckForEual(t,("arena"..j-5))) then i = j end end
 	if ((k ~= 11) and TrGCDCheckForEual(t,"target")) then i = 11 end
 	if ((k~= 12) and TrGCDCheckForEual(t,"focus")) then i = 12 end
-	if (i ~= 0) then -- ���� ���� �� �������� ���� �������
+	if (i ~= 0) then -- если есть то копипаст всей очереди
 		local width = TrGCDQueueOpt[i].width*TrGCDQueueOpt[i].size
 		for j=1,10 do
 			TrGCDIcon[k][j].x = TrGCDIcon[i][j].x
@@ -914,7 +955,7 @@ function TrGCDPlayerTarFocDetect(k) -- ��� ���� �� ����
 			TrGCDIcon[k][j]:SetAlpha(TrGCDIcon[i][j]:GetAlpha())
 			TrGCDIcon[k][j].TimeStart = TrGCDIcon[i][j].TimeStart
 			if (TrGCDIcon[k][j].show) then 
-				TrGCDIcon[k][j]:SetAlpha((1-(abs(TrGCDIcon[k][j].x) - width)/10))  --������ ��� ������ ������� �������
+				TrGCDIcon[k][j]:SetAlpha((1-(abs(TrGCDIcon[k][j].x) - width)/10))  --МИГАЕТ ПРИ РАЗНОМ РАЗМЕРЕ ОЧЕРЕДИ
 				TrGCDIcon[k][j]:Show() 
 			else TrGCDIcon[k][j]:Hide() end
 			TrGCDIcon[k][j].texture2.show = TrGCDIcon[i][j].texture2.show
@@ -927,48 +968,50 @@ function TrGCDPlayerTarFocDetect(k) -- ��� ���� �� ����
 		TrGCDCastSpBanTime[k] = TrGCDCastSpBanTime[i]	
 		TrGCDi[k] = TrGCDi[i]
 		TrGCDQueueFirstI[k] = 1
-		if (TrGCDSizeQueue(i) > 0) then -- �������� ������� ������� �� ������ �����
+		if (TrGCDSizeQueue(i) > 0) then -- копипаст очереди спеллов на первое место
 			for j=1,TrGCDSizeQueue(i) do
 				TrGCDQueueFirst[k][j] = TrGCDQueueFirst[i][TrGCDQueueFirstI[i]+j-1]
 			end
 		end
 	end
 end
---TrGCDQueueFirst - ������� ������� �� ����� �����
-function TrGCDAddSpQueue(TrGCDit, i) -- �������� ����� ����� �� ������� ������� �� ����� �����
+
+function string.starts(String,Start)
+   return string.sub(String,1,string.len(Start))==Start
+end
+
+--TrGCDQueueFirst - Очередь спеллов на новое место
+function TrGCDAddSpQueue(TrGCDit, i) -- добавить новый спелл на очередь спеллов на новое место
 	local k = TrGCDQueueFirstI[i]
 	while (TrGCDQueueFirst[i][k] ~= nil) do k = k + 1 end
 	TrGCDQueueFirst[i][k] = TrGCDit
 end
-function TrGCDSizeQueue(i) -- ������ ����� ������� ������� �� ����� �����
+function TrGCDSizeQueue(i) -- узнать длину очереди спеллов на новое место
 	local k = TrGCDQueueFirstI[i]
 	while (TrGCDQueueFirst[i][k] ~= nil) do k = k + 1 end
 	return (k - TrGCDQueueFirstI[i])
 end
-function TrGCDPlayerDetect(who) --��������� ������ ������������ �����
-	local t = false --true - ���� ����� �������� ���-�� � ���� ��� �� �����
-	local i = 0
-	if (who == "player") then i = 1 t = true return i,t end
-	for j=2,5 do if (who == ("party"..j-1)) then i = j t = true return i,t end end
-	for j=6,10 do if (who == ("arena"..j-5)) then i = j t = true return i,t end end
-	if (who == "target") then i = 11 t = true return i,t end
-	if (who == "focus") then i = 12 t = true end
-	return i, t
+function TrGCDPlayerDetect(who) --Определим игрока отправившего спелл
+	if (who == "player") then return 1 end 
+	if (string.starts(who, "party")) then return who:sub(6,7)+1 end
+	if (string.starts(who, "arena")) then return who:sub(6,7)+5 end
+	if (who == "target") then return 11 end
+	if (who == "focus") then return 12 end
 end
---48108 - �������� �����!
---34936 - �������� ����
---93400 - �������� ������
---69369 - ��������������� �������
---81292 - C����� ��������� ������
---87160 - ����������� ����
---114255 - ����������� �����
---124430 - ������������ ��������
-function TrGCDEventBuffHandler(self,event, ...) --�������� ������� ��������� ������/�������� ���������
+--48108 - Огненная глыба!
+--34936 - Ответный удар
+--93400 - Падающие звезды
+--69369 - Стремительность хищника
+--81292 - Cимвол пронзания разума
+--87160 - Наступление тьмы
+--114255 - Пробуждение света
+--124430 - Божественная мудрость
+function TrGCDEventBuffHandler(self,event, ...) --запущена эвентом изменения баффов/дебаффов персонажа
 	if (TrGCDEnable) then
 		local who = ... ;
-		local i,t = TrGCDPlayerDetect(who)
+		local i = TrGCDPlayerDetect(who)
 		local tt = true
-		if (t) then
+		if (i ~= nil) then
 			for k=1,16 do
 				local k = select(11,UnitBuff(who, k))
 				if (k == 48108) then TrGCDInsSp["spell"][i] = 48108 tt = false
@@ -984,7 +1027,7 @@ function TrGCDEventBuffHandler(self,event, ...) --�������� ��
 		end
 	end
 end
-local function TrGCDAddGcdSpell(texture, i, spellid) -- ���������� ������ ������ � �������
+local function TrGCDAddGcdSpell(texture, i, spellid) -- добавление нового спелла в очередь
 	if (TrGCDi[i] == 10) then TrGCDi[i] = 1 end
 	TrGCDAddSpQueue(TrGCDi[i], i)
 	TrGCDIcon[i][TrGCDi[i]].x = 0;
@@ -995,73 +1038,70 @@ local function TrGCDAddGcdSpell(texture, i, spellid) -- ��������
 	TrGCDIcon[i][TrGCDi[i]].spellID = spellid
 	TrGCDi[i] = TrGCDi[i] + 1
 end
-function TrGCDEventHandler(self, event, ...)
-	local arg1, arg5 = ...; -- arg1 - who,  arg5 - spellID
-	local spellicon = select(3, GetSpellInfo(arg5))
-	local casttime = select(7, GetSpellInfo(arg5))
+function TrGCDEventHandler(self, event, source, spellId)
+	local i = TrGCDPlayerDetect(source)
 	
-	if select(7, GetSpellInfo(arg5)) then
-		casttime = select(7, GetSpellInfo(arg5))/1000
-	else
-		casttime = 0
-	end
-
-	local spellname = GetSpellInfo(arg5)
-	local i,t = TrGCDPlayerDetect(arg1) -- i - ����� ������������, t = true - ���� ��� �� �� ���� ��� �� �����
-	if (TrGCDEnable and t and TrGCDQueueOpt[i].enable) then
-		--print(arg5 .. " - " .. spellname)
-		local blt = true -- ��� ��������� ������� ������
-		local sblt = true -- ��� ��������� ������� ������ (������ �� ID)
-		TrGCDInsSp["time"][i] = GetTime()	
-		for l=1, #TrGCDBL do if ((TrGCDBL[l] == spellname) or (GetSpellInfo(TrGCDBL[l]) == spellname)) then blt = false end end -- �������� �� ������ ������
-		for l=1, #InnerBL do if (InnerBL[l] == arg5) then sblt = false end end -- �������� �� �������� ������ ������
-		if ((spellicon ~= nil) and t and blt and sblt and (GetSpellLink(arg5) ~= nil)) then
-			if (arg5 == 42292) then spellicon = trinket end --������ �������� ��� ��������
-				local IsChannel = UnitChannelInfo(arg1)--��������� �� �����
-			if (event == "UNIT_SPELLCAST_START") then
-				--print("cast " .. spellname)
-				TrGCDAddGcdSpell(spellicon, i, arg5)
-				TrGCDCastSp[i] = 0-- 0 - ���� ����, 1 - ���� ������ � �� ����
-				TrGCDCastSpBanTime[i] = GetTime()
-
-			elseif (event == "UNIT_SPELLCAST_SUCCEEDED") then
-				if (TrGCDCastSp[i] == 0) then
-					--print("succeeded then " .. spellname)
-					if (IsChannel == nil) then TrGCDCastSp[i] = 1 end
-				else
-					local b = false --����� �� �������� ���� ������� �����
-					if ((TrGCDInsSp["spell"][i] == 48108) and (arg5 == 11366)) then b = true
-					elseif ((TrGCDInsSp["spell"][i] == 34936) and (arg5 == 29722)) then b = true
-					elseif ((TrGCDInsSp["spell"][i] == 93400) and (arg5 == 78674)) then b = true
-					elseif ((TrGCDInsSp["spell"][i] == 69369) and ((arg5 == 339) or (arg5 == 33786) or (arg5 == 5185) or (arg5 == 2637) or (arg5 == 20484)))then b = true 
-					elseif ((TrGCDInsSp["spell"][i] == 81292) and (arg5 == 8092)) then b = true
-					elseif ((TrGCDInsSp["spell"][i] == 87160) and (arg5 == 73510)) then b = true
-					elseif ((TrGCDInsSp["spell"][i] == 114255) and (arg5 == 2061)) then b = true
-					elseif ((TrGCDInsSp["spell"][i] == 124430) and (arg5 == 8092)) then b = true end
-					TrGCDCastSpBanTime[i] = GetTime()
-					if (IsChannel ~= nil) then TrGCDCastSp[i] = 0 end
-					if (((GetTime()-TrGCDSpStopTime[i]) < 1) and (TrGCDSpStopName[i] == spellname) and (b == false)) then
-						TrGCDIcon[i][TrGCDSpStop[i]].texture2:Hide()
-						TrGCDIcon[i][TrGCDSpStop[i]].texture2.show = false
+	if (i ~= nil and TrGCDEnable and TrGCDQueueOpt[i].enable) then
+		TrGCDInsSp["time"][i] = GetTime()
+		if (spellId ~= nil) then 
+			local spellicon = select(3, GetSpellInfo(spellId))
+			if (spellId == 42292) then spellicon = trinket end
+			if (spellicon ~= nil and (GetSpellLink(spellId) ~= nil)) then
+				local spellname = GetSpellInfo(spellId)
+				
+				local blackListed = false
+				for l=1, #TrGCDBL do if ((TrGCDBL[l] == spellname) or (GetSpellInfo(TrGCDBL[l]) == spellname)) then blackListed = true break end end
+				for l=1, #InnerBL do if (InnerBL[l] == arg5) then blackListed = true break end end
+				
+				if not blackListed then
+					local casttime = select(7, GetSpellInfo(spellId))
+					if select(7, GetSpellInfo(spellId)) then
+						casttime = select(7, GetSpellInfo(spellId))/1000
+					else
+						casttime = 0
 					end
-					if ((casttime <= 0) or b) then TrGCDAddGcdSpell(spellicon, i, arg5) end
-					--print("succeeded " .. spellname .. " - " ..TrGCDCastSp[i])
+					
+					if (event == "UNIT_SPELLCAST_START") then
+						--print("cast " .. TrGCDCastSp[i])
+						TrGCDAddGcdSpell(spellicon, i, spellId)
+						TrGCDCastSp[i] = 0
+						TrGCDCastSpBanTime[i] = GetTime()
+					elseif (event == "UNIT_SPELLCAST_SUCCEEDED") then
+						TrGCDAddGcdSpell(spellicon, i, spellId)
+						TrGCDCastSp[i] = 1
+						TrGCDCastSpBanTime[i] = GetTime()
+						--print("succeeded then " .. TrGCDCastSp[i])
+					end
 				end
-			elseif ((event == "UNIT_SPELLCAST_STOP") and (TrGCDCastSp[i] == 0)) then
-				--print("stop " .. spellname)
-				TrGCDCastSp[i] = 1
+			end
+		elseif (event == "UNIT_SPELLCAST_SUCCEEDED") then
+			TrGCDCastSp[i] = 1
+			TrGCDCastSpBanTime[i] = GetTime()
+		elseif ((event == "UNIT_SPELLCAST_STOP") and (TrGCDCastSp[i] == 0)) then
+			--print("stop " .. TrGCDCastSp[i])
+			if (TrGCDCastSp[i] == 0) then
 				TrGCDIcon[i][TrGCDi[i]-1].texture2:Show()
 				TrGCDIcon[i][TrGCDi[i]-1].texture2.show = true
-				TrGCDSpStop[i] = TrGCDi[i]-1
-				TrGCDSpStopName[i] = spellname
-				TrGCDSpStopTime[i] = GetTime()
-			elseif (event == "UNIT_SPELLCAST_CHANNEL_STOP") then
 				TrGCDCastSp[i] = 1
-				--print("channel stop " .. spellname .. " - " .. TrGCDCastSp[i])
 			end
+			TrGCDSpStop[i] = TrGCDi[i]-1
+			--TrGCDSpStopName[i] = TrGCDCastSp[i]
+			TrGCDSpStopTime[i] = GetTime()
+		elseif(event == "UNIT_SPELLCAST_CHANNEL_START") then
+			local channelName, channelnameSubtext, channelText, channelTexture, channelStartTimeMS, channelEndTimeMS, channelIsTradeSkill, channgelNotInterruptible, channelSpellId = UnitChannelInfo(source)
+			if (channelName ~= nil) then
+				TrGCDAddGcdSpell(channelTexture, i, channelSpellId)
+				TrGCDCastSp[i] = 0
+				TrGCDCastSpBanTime[i] = GetTime()
+			end
+		elseif (event == "UNIT_SPELLCAST_CHANNEL_STOP") then
+			TrGCDCastSp[i] = 1
+			--print("channel stop " .. TrGCDCastSp[i])
 		end
+		
 	end
 end
+
 function TrGCDUpdate(self)
 	if ((GetTime() - TimeReset)> TimeDelay) then
 		for i=1,12 do
